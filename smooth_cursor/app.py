@@ -31,6 +31,7 @@ from .capture import (
     icon_to_cursor_frame,
     probe_cursor_passthrough,
 )
+from .overlay import EffectsOverlay
 from .physics import InertiaState, update_inertia
 from .settings import Settings, load_settings
 from .winapi import (
@@ -158,6 +159,8 @@ class SmoothCursorApp:
         self._last_probe_at = 0.0
         self._scale = 1.0
         self._anim_rot = 0.0
+        self._overlay = EffectsOverlay()
+        self._click_dust_pulse = False
         # Per-OCR animated players from the Windows cursor scheme (.ani files).
         self._ocr_ani: dict[int, AniPlayer] = {}
         # Optional user .ani override (Ani tab).
@@ -176,6 +179,7 @@ class SmoothCursorApp:
         self.settings = settings.copy()
         self.settings.apply_to_physics(self.physics)
         self.settings.apply_to_anim(self.anim)
+        self._overlay.apply_settings(self.settings)
         self._reload_ani()
 
     def _reload_ani(self, *, force: bool = False) -> None:
@@ -631,13 +635,14 @@ class SmoothCursorApp:
     def _on_mouse_ll(self, nCode, wParam, lParam):
         if nCode != HC_ACTION:
             return user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
-        if not self.settings.anim_enabled:
-            return user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
         if wParam in (WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN):
-            on_click_down(self.anim)
+            self._click_dust_pulse = True
+            if self.settings.anim_enabled:
+                on_click_down(self.anim)
         elif wParam in (WM_LBUTTONUP, WM_RBUTTONUP, WM_MBUTTONUP):
-            on_click_up(self.anim)
-        elif wParam == WM_MOUSEWHEEL:
+            if self.settings.anim_enabled:
+                on_click_up(self.anim)
+        elif wParam == WM_MOUSEWHEEL and self.settings.anim_enabled:
             info = ctypes.cast(lParam, ctypes.POINTER(MSLLHOOKSTRUCT)).contents
             delta = ctypes.c_short(info.mouseData >> 16).value
             on_scroll(self.anim, self.physics, int(delta))
@@ -681,6 +686,10 @@ class SmoothCursorApp:
     def _restore(self) -> None:
         self._uninstall_mouse_hook()
         self._uninstall_keyboard_hook()
+        try:
+            self._overlay.destroy()
+        except Exception:
+            pass
         self._exit_custom()
         detach_cursor_thread()
         restore_cursor_visibility()
@@ -719,6 +728,11 @@ class SmoothCursorApp:
         self._publish_all(0.0)
         self._install_mouse_hook()
         self._install_keyboard_hook()
+        self._overlay.apply_settings(self.settings)
+        try:
+            self._overlay.create()
+        except Exception:
+            pass
         if not getattr(self, "_atexit_registered", False):
             atexit.register(self._restore)
             self._atexit_registered = True
@@ -761,6 +775,17 @@ class SmoothCursorApp:
                         detach_cursor_thread()
                     if self.settings.inertia_enabled:
                         update_inertia(self.physics, float(x), float(y), dt)
+                    try:
+                        self._overlay.update(
+                            float(x),
+                            float(y),
+                            self.physics.last_vx,
+                            self.physics.last_vy,
+                            dt,
+                            clicked=False,
+                        )
+                    except Exception:
+                        pass
                     time.sleep(0.002)
                     continue
 
@@ -775,7 +800,9 @@ class SmoothCursorApp:
                     self.physics.last_x, self.physics.last_y = float(x), float(y)
                     angle = 0.0
 
-                speed = math.hypot(self.physics.last_vx, self.physics.last_vy)
+                vx = float(self.physics.last_vx)
+                vy = float(self.physics.last_vy)
+                speed = math.hypot(vx, vy)
                 speed_for_scale = speed if self.settings.inertia_enabled else 0.0
                 if (
                     self.settings.anim_enabled
@@ -795,6 +822,15 @@ class SmoothCursorApp:
                     self.anim.badge_label = ""
                     self.anim.badge_count = 1
                     self._scale, self._anim_rot = 1.0, 0.0
+
+                clicked = self._click_dust_pulse
+                self._click_dust_pulse = False
+                try:
+                    self._overlay.update(
+                        float(x), float(y), vx, vy, dt, clicked=clicked
+                    )
+                except Exception:
+                    pass
 
                 # Resolve which system OCR (if any) is showing before ani tick,
                 # so we only SetSystemCursor for the visible animated slot.

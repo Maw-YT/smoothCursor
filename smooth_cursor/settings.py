@@ -69,6 +69,29 @@ class Settings:
     ani_speed: float = 1.0
     ani_replace_all: bool = False
 
+    # Effects — trails / dust
+    trails_enabled: bool = True
+    trail_length: float = 12.0
+    trail_opacity: float = 0.55
+    trail_size: float = 1.0
+    trail_fade: float = 1.0
+    trail_spacing: float = 8.0
+    trail_min_speed: float = 25.0
+    trail_theme: str = "Teal"
+    dust_enabled: bool = True
+    dust_amount: float = 0.65
+    dust_speed_ref: float = 900.0
+    dust_min_speed: float = 0.35
+    dust_size: float = 1.0
+    dust_life: float = 1.0
+    dust_gravity: float = 180.0
+    dust_spread: float = 1.0
+    dust_drag: float = 0.96
+    dust_opacity: float = 1.0
+    dust_click_burst: float = 1.0
+    dust_on_click: bool = True
+    dust_theme: str = "Mix"
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -104,6 +127,12 @@ class Settings:
 
         if base.badge_font not in BADGE_FONTS:
             base.badge_font = "Segoe UI"
+        from .overlay import EFFECT_THEMES
+
+        if base.trail_theme not in EFFECT_THEMES:
+            base.trail_theme = "Teal"
+        if base.dust_theme not in EFFECT_THEMES:
+            base.dust_theme = "Mix"
         return base
 
     def copy(self) -> Settings:
@@ -156,6 +185,22 @@ SETTING_META: dict[str, tuple[str, float, float, float, str]] = {
     "badge_fade_s": ("Badge fade (s)", 0.2, 2.0, 0.05, "Typing"),
     "badge_size": ("Badge size", 0.7, 1.5, 0.05, "Typing"),
     "ani_speed": ("Playback speed", 0.25, 3.0, 0.05, "Ani"),
+    "trail_length": ("Point count", 4.0, 40.0, 1.0, "Trails"),
+    "trail_opacity": ("Opacity", 0.1, 1.0, 0.05, "Trails"),
+    "trail_size": ("Dot size", 0.25, 3.0, 0.05, "Trails"),
+    "trail_fade": ("Fade time", 0.25, 3.0, 0.05, "Trails"),
+    "trail_spacing": ("Spacing (ms)", 2.0, 40.0, 1.0, "Trails"),
+    "trail_min_speed": ("Min speed (px/s)", 0.0, 400.0, 5.0, "Trails"),
+    "dust_amount": ("Amount", 0.0, 3.0, 0.05, "Dust"),
+    "dust_speed_ref": ("Full at speed (px/s)", 300.0, 2500.0, 50.0, "Dust"),
+    "dust_min_speed": ("Spawn threshold", 0.0, 1.0, 0.05, "Dust"),
+    "dust_size": ("Particle size", 0.25, 3.0, 0.05, "Dust"),
+    "dust_life": ("Lifetime", 0.25, 3.0, 0.05, "Dust"),
+    "dust_gravity": ("Gravity", -200.0, 600.0, 10.0, "Dust"),
+    "dust_spread": ("Spread", 0.1, 3.0, 0.05, "Dust"),
+    "dust_drag": ("Air drag", 0.85, 0.995, 0.005, "Dust"),
+    "dust_opacity": ("Opacity", 0.05, 1.0, 0.05, "Dust"),
+    "dust_click_burst": ("Click burst", 0.0, 3.0, 0.05, "Dust"),
 }
 
 

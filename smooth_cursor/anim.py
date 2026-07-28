@@ -284,7 +284,12 @@ def on_key_type(state: AnimState, vk_code: int) -> None:
         state.badge_alpha = 1.0
 
 
-def update_anim(state: AnimState, dt: float, *, speed: float = 0.0) -> tuple[float, float]:
+def update_anim(
+    state: AnimState,
+    dt: float,
+    *,
+    speed: float = 0.0,
+) -> tuple[float, float]:
     """Returns (scale, extra_rotation_deg)."""
     if dt <= 0:
         return state.scale, state.rot

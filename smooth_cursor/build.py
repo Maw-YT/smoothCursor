@@ -194,22 +194,28 @@ def draw_key_badge(
 
 
 def rotate_around_hotspot(
-    img: Image.Image, hx: int, hy: int, angle: float, scale: float = 1.0
+    img: Image.Image,
+    hx: int,
+    hy: int,
+    angle: float,
+    scale: float = 1.0,
 ) -> tuple[Image.Image, int, int]:
-    """Rotate around hotspot, then crop to content so the HCURSOR stays small."""
+    """
+    Scale uniformly, rotate around hotspot, then crop to content so the HCURSOR stays small.
+    """
     img = img.convert("RGBA")
-    if abs(scale - 1.0) > 0.001:
-        scale = max(0.35, min(1.75, float(scale)))
-        nw = max(1, int(round(img.width * scale)))
-        nh = max(1, int(round(img.height * scale)))
+    sx = max(0.35, min(1.85, float(scale)))
+    if abs(sx - 1.0) > 0.001:
+        nw = max(1, int(round(img.width * sx)))
+        nh = max(1, int(round(img.height * sx)))
         img = img.resize((nw, nh), Image.BICUBIC)
-        hx = int(round(hx * scale))
-        hy = int(round(hy * scale))
+        hx = int(round(hx * sx))
+        hy = int(round(hy * sx))
 
     hx = max(0, min(img.width, int(hx)))
     hy = max(0, min(img.height, int(hy)))
 
-    if abs(angle) < 0.01 and abs(scale - 1.0) < 0.001:
+    if abs(angle) < 0.01 and abs(sx - 1.0) < 0.001:
         return _crop_to_content(img, hx, hy)
 
     ow, oh = img.size

@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox
 from .ani import try_load_ani
 from .app import SmoothCursorApp, restore_cursor_visibility
 from .build import BADGE_FONTS, BADGE_STYLES, BADGE_THEMES
+from .overlay import EFFECT_THEMES
 from .settings import SETTING_META, Settings, load_settings, save_settings, settings_path
 from .winapi import SPI_SETCURSORS, user32
 
@@ -29,7 +30,7 @@ _COLORS = {
     "ok": "#34d399",
 }
 
-_SECTION_ORDER = ("Inertia", "Click", "Rotation", "Scroll", "Typing", "Ani")
+_SECTION_ORDER = ("Inertia", "Click", "Rotation", "Scroll", "Typing", "Ani", "Trails", "Dust")
 
 # Tab name → (blurb, enable_key|None, sections from SETTING_META)
 _TABS: tuple[tuple[str, str, str | None, tuple[str, ...]], ...] = (
@@ -68,6 +69,12 @@ _TABS: tuple[tuple[str, str, str | None, tuple[str, ...]], ...] = (
         "Optional .ani override. Scheme Wait/Busy .ani files animate automatically.",
         "ani_enabled",
         ("Ani",),
+    ),
+    (
+        "Effects",
+        "Cursor trails and dust particles — tune look, feel, and when they fire.",
+        None,
+        ("Trails", "Dust"),
     ),
     (
         "Twist",
@@ -168,12 +175,17 @@ class SmoothCursorGUI:
         self._vars["show_combos"] = ctk.BooleanVar(value=True)
         self._vars["ani_enabled"] = ctk.BooleanVar(value=False)
         self._vars["ani_replace_all"] = ctk.BooleanVar(value=False)
+        self._vars["trails_enabled"] = ctk.BooleanVar(value=True)
+        self._vars["dust_enabled"] = ctk.BooleanVar(value=True)
+        self._vars["dust_on_click"] = ctk.BooleanVar(value=True)
         self._ani_path = ctk.StringVar(value="")
         self._ani_status = ctk.StringVar(value="No .ani loaded")
         self._choice_vars: dict[str, ctk.StringVar] = {
             "badge_style": ctk.StringVar(value="Pill"),
             "badge_theme": ctk.StringVar(value="Teal"),
             "badge_font": ctk.StringVar(value="Segoe UI"),
+            "trail_theme": ctk.StringVar(value="Teal"),
+            "dust_theme": ctk.StringVar(value="Mix"),
         }
 
         buckets: dict[str, list[tuple[str, str, float, float, float]]] = {s: [] for s in _SECTION_ORDER}
@@ -232,6 +244,8 @@ class SmoothCursorGUI:
                     ("anim_enabled", "Click & scroll anim", "Scale and twist on click / wheel"),
                     ("typing_enabled", "Typing badge", "Show keys on the cursor as you type"),
                     ("ani_enabled", "Custom .ani override", "Optional — scheme Wait/Busy already animate"),
+                    ("trails_enabled", "Cursor trails", "Soft trail stamps behind the pointer"),
+                    ("dust_enabled", "Dust particles", "Sparkles when you move fast or click"),
                 )
                 for i, (key, title, subtitle) in enumerate(switches):
                     if i:
@@ -259,6 +273,45 @@ class SmoothCursorGUI:
                     wraplength=400,
                 ).pack(fill="x", pady=(4, 0))
                 continue
+
+            if tab_name == "Effects":
+                card = self._feature_card(scroll)
+                card.pack(fill="x", padx=4, pady=(0, 10))
+                body = self._card_body(card)
+                effect_switches = (
+                    ("trails_enabled", "Enable trails", "Fading stamps behind the cursor"),
+                    ("dust_enabled", "Enable dust", "Particles when moving fast"),
+                    ("dust_on_click", "Dust on click", "Burst of particles when you click"),
+                )
+                for i, (key, title, subtitle) in enumerate(effect_switches):
+                    if i:
+                        ctk.CTkFrame(body, height=1, fg_color=_COLORS["border"]).pack(
+                            fill="x", pady=10
+                        )
+                    self._add_switch(body, title, subtitle, self._vars[key])
+
+                look = self._feature_card(scroll)
+                look.pack(fill="x", padx=4, pady=(0, 10))
+                look_body = self._card_body(look)
+                ctk.CTkLabel(
+                    look_body,
+                    text="COLORS",
+                    font=ctk.CTkFont(family="Segoe UI Semibold", size=11),
+                    text_color=_COLORS["accent"],
+                    anchor="w",
+                ).pack(fill="x", pady=(0, 8))
+                self._add_choice(
+                    look_body,
+                    "Trail color",
+                    self._choice_vars["trail_theme"],
+                    list(EFFECT_THEMES.keys()),
+                )
+                self._add_choice(
+                    look_body,
+                    "Dust color",
+                    self._choice_vars["dust_theme"],
+                    list(EFFECT_THEMES.keys()),
+                )
 
             if enable_key is not None:
                 enable_card = self._feature_card(scroll)
